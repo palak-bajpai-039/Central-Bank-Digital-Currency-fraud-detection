@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>CBDC Fraud Detection Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1115; --surface: #171a21; --surface2: #1e222b;
+    --border: #2a2f3a; --text: #e7e9ee; --muted: #8b93a3;
+    --green: #34d399; --amber: #fbbf24; --red: #f87171; --teal: #2dd4bf;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 20px 28px; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
+  header h1 { font-size:18px; margin:0; font-weight:600; }
+  .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+  .connected { background: var(--green); }
+  .disconnected { background: var(--red); }
+  main { padding: 24px 28px; max-width: 1200px; margin: 0 auto; }
+  .grid-metrics { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .card .label { font-size:12px; color:var(--muted); margin:0 0 6px; }
+  .card .value { font-size:24px; font-weight:600; margin:0; }
+  .layout { display:grid; grid-template-columns: 1.3fr 1fr; gap:16px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  .panel h2 { font-size:15px; margin:0 0 14px; font-weight:600; }
+  .txn-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .txn-row:last-child { border-bottom:none; }
+  .txn-vpas { color:var(--text); }
+  .txn-meta { color:var(--muted); font-size:12px; margin-top:2px; }
+  .badge { font-size:11px; padding:3px 10px; border-radius:20px; font-weight:500; white-space:nowrap; }
+  .badge.approved { background:rgba(52,211,153,0.15); color:var(--green); }
+  .badge.held_for_review { background:rgba(248,113,113,0.15); color:var(--red); }
+  form { display:flex; flex-direction:column; gap:10px; }
+  label { font-size:12px; color:var(--muted); }
+  select, input, button { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:9px 10px; border-radius:8px; font-size:13px; width:100%; }
+  button { cursor:pointer; font-weight:600; margin-top:4px; }
+  button.primary { background:var(--teal); color:#04201c; border:none; }
+  button.secondary { background:transparent; border:1px solid var(--border); }
+  #sendResult { margin-top:10px; font-size:13px; padding:10px; border-radius:8px; display:none; }
+  #sendResult.approved { background:rgba(52,211,153,0.1); color:var(--green); display:block; }
+  #sendResult.held_for_review { background:rgba(248,113,113,0.1); color:var(--red); display:block; }
+  .sim-controls { display:flex; gap:8px; margin-bottom:16px; }
+  .sim-controls button { width:auto; padding:8px 14px; font-size:12px; }
+  .empty { color:var(--muted); font-size:13px; padding:20px 0; text-align:center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CBDC Fraud Detection — Live Dashboard</h1>
+  <div id="connStatus" style="font-size:13px; color:var(--muted);">
+    <span class="status-dot disconnected" id="dot"></span><span id="connText">Connecting…</span>
+  </div>
+</header>
+
+<main>
+  <div class="sim-controls">
+    <button class="secondary" onclick="startSim()">▶ Start background traffic</button>
+    <button class="secondary" onclick="stopSim()">■ Stop background traffic</button>
+  </div>
+
+  <div class="grid-metrics">
+    <div class="card"><p class="label">Total transactions</p><p class="value" id="mTotal">0</p></div>
+    <div class="card"><p class="label">Held for review</p><p class="value" id="mHeld" style="color:var(--red);">0</p></div>
+    <div class="card"><p class="label">Avg risk score</p><p class="value" id="mAvgRisk">0%</p></div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>Live transaction feed</h2>
+        <div id="feed"><p class="empty">No transactions yet — send one or start background traffic.</p></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Send money (wallet app)</h2>
+        <form id="sendForm">
+          <div>
+            <label>From (your VPA)</label>
+            <select id="fromVpa" aria-label="From VPA"></select>
+          </div>
+          <div>
+            <label>To (receiver VPA)</label>
+            <select id="toVpa" aria-label="To VPA"></select>
+          </div>
+          <div>
+            <label>Amount (₹)</label>
+            <input type="number" id="amount" value="500" min="1" step="1">
+          </div>
+          <div>
+            <label>Transaction type</label>
+            <select id="txnType" aria-label="Transaction type">
+              <option>P2P_TRANSFER</option>
+              <option>P2M_PAYMENT</option>
+              <option>COLLECT_REQUEST</option>
+              <option>QR_SCAN</option>
+              <option>BILL_PAYMENT</option>
+              <option>RECHARGE</option>
+            </select>
+          </div>
+          <button type="submit" class="primary">Send</button>
+        </form>
+        <div id="sendResult"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Alerts (held for review)</h2>
+        <div id="alertsPanel"><p class="empty">No alerts yet.</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>window.CBDC_API_URL = "http://localhost:8000";</script>
+<script>
+const API = window.CBDC_API_URL || (
+  location.protocol === "file:" ? "http://localhost:8000" : location.origin
+);
+const WS_URL = API.replace(/^http/, "ws") + "/ws/live";
+let feedItems = [];
+let alertItems = [];
+
+async function loadWallets() {
+  try {
+    const res = await fetch(`${API}/wallets`);
+    const data = await res.json();
+    const fromSel = document.getElementById('fromVpa');
+    const toSel = document.getElementById('toVpa');
+    data.demo_wallets.forEach(v => {
+      fromSel.innerHTML += `<option value="${v}">${v}</option>`;
+      toSel.innerHTML += `<option value="${v}">${v}</option>`;
+    });
+    if (data.demo_wallets.length > 1) toSel.selectedIndex = 1;
+  } catch (e) {
+    console.error("Could not load wallets — is the backend running on :8000?", e);
+  }
+}
+
+async function loadStats() {
+  try {
+    const res = await fetch(`${API}/stats`);
+    const s = await res.json();
+    document.getElementById('mTotal').textContent = s.total_transactions;
+    document.getElementById('mHeld').textContent = s.held_for_review;
+    document.getElementById('mAvgRisk').textContent = Math.round(s.avg_risk_score * 100) + '%';
+  } catch (e) { /* backend not up yet */ }
+}
+
+function renderFeed() {
+  const el = document.getElementById('feed');
+  if (feedItems.length === 0) { el.innerHTML = '<p class="empty">No transactions yet.</p>'; return; }
+  el.innerHTML = feedItems.slice(0, 12).map(t => `
+    <div class="txn-row">
+      <div>
+        <div class="txn-vpas">${t.sender_vpa} → ${t.receiver_vpa}</div>
+        <div class="txn-meta">₹${Number(t.amount).toLocaleString('en-IN')} · ${t.type} · risk ${(t.risk_score*100).toFixed(0)}%</div>
+      </div>
+      <span class="badge ${t.status}">${t.status === 'approved' ? 'Approved' : 'Held'}</span>
+    </div>
+  `).join('');
+}
+
+function renderAlerts() {
+  const el = document.getElementById('alertsPanel');
+  if (alertItems.length === 0) { el.innerHTML = '<p class="empty">No alerts yet.</p>'; return; }
+  el.innerHTML = alertItems.slice(0, 8).map(t => `
+    <div class="txn-row">
+      <div>
+        <div class="txn-vpas">${t.sender_vpa} → ${t.receiver_vpa}</div>
+        <div class="txn-meta">₹${Number(t.amount).toLocaleString('en-IN')} · ${t.reasons}</div>
+      </div>
+      <span class="badge held_for_review">${(t.risk_score*100).toFixed(0)}%</span>
+    </div>
+  `).join('');
+}
+
+function connectWS() {
+  const ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    document.getElementById('dot').className = 'status-dot connected';
+    document.getElementById('connText').textContent = 'Live';
+  };
+  ws.onclose = () => {
+    document.getElementById('dot').className = 'status-dot disconnected';
+    document.getElementById('connText').textContent = 'Disconnected — retrying…';
+    setTimeout(connectWS, 2000);
+  };
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.event === 'transaction') {
+      feedItems.unshift(msg.data);
+      if (msg.data.status === 'held_for_review') alertItems.unshift(msg.data);
+      renderFeed();
+      renderAlerts();
+      loadStats();
+    }
+  };
+}
+
+document.getElementById('sendForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    sender_vpa: document.getElementById('fromVpa').value,
+    receiver_vpa: document.getElementById('toVpa').value,
+    amount: parseFloat(document.getElementById('amount').value),
+    type: document.getElementById('txnType').value,
+  };
+  const res = await fetch(`${API}/transaction`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': 'sk_demo_public_key_for_testing_only',
+    },
+    body: JSON.stringify(body)
+  });
+  const result = await res.json();
+  const resultEl = document.getElementById('sendResult');
+  resultEl.className = result.status;
+  resultEl.textContent = result.status === 'approved'
+    ? `✓ Approved (risk ${(result.risk_score*100).toFixed(0)}%)`
+    : `⚠ Held for review — ${result.reasons.join(', ')} (risk ${(result.risk_score*100).toFixed(0)}%)`;
+});
+
+async function startSim() { await fetch(`${API}/simulate/start`, {method:'POST'}); }
+async function stopSim() { await fetch(`${API}/simulate/stop`, {method:'POST'}); }
+
+loadWallets();
+loadStats();
+connectWS();
+setInterval(loadStats, 5000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Compile-check backend
+        run: python -m py_compile backend/main.py
+
+      - name: Compile-check scripts
+        run: |
+          python -m py_compile scripts/generate_dataset.py
+          python -m py_compile scripts/train_models.py
+          python -m py_compile scripts/eda.py

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Backend runtime
+backend/upi_fraud.db
+backend/*.db
+
+# Node (if frontend build tooling is added later)
+node_modules/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Large local artifacts (models/data are tracked deliberately — see .gitattributes note in README)
+*.log
