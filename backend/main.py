@@ -22,6 +22,11 @@ Run (from inside the backend/ folder — do NOT run this file with plain
 
 Docs: http://localhost:8000/docs
 """
+import warnings
+from sklearn.exceptions import InconsistentVersionWarning
+
+# Suppress the scikit-learn version mismatch warnings
+warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
 
 import asyncio
 import os
