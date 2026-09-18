@@ -45,8 +45,8 @@ The dataset generator is modeled on **PaySim**, a peer-reviewed financial
 fraud simulator built from real financial logs of an actual mobile money
 operator running in 14+ countries:
 
-> Lopez-Rojas, E. A., Elmir, A., & Axelsson, S. (2016). *PaySim: A financial
-> mobile money simulator for fraud detection.* The 28th European Modeling
+> Lopez-Rojas, E. A., Elmir, A., & Axelsson, S. (2016). _PaySim: A financial
+> mobile money simulator for fraud detection._ The 28th European Modeling
 > and Simulation Symposium (EMSS), Larnaca, Cyprus.
 
 PaySim (and derivatives of it) is a standard, widely-cited benchmark in
@@ -95,12 +95,12 @@ auto-blocking costly to a real user.
 
 Evaluated on a held-out test set of 12,500 transactions (31 fraud):
 
-| Metric | Score |
-|---|---|
+| Metric                  | Score |
+| ----------------------- | ----- |
 | Precision (fraud class) | 0.844 |
-| Recall (fraud class) | 0.871 |
-| F1 score | 0.857 |
-| ROC-AUC | 0.998 |
+| Recall (fraud class)    | 0.871 |
+| F1 score                | 0.857 |
+| ROC-AUC                 | 0.998 |
 
 **Why not accuracy?** Fraud is ~0.25% of the dataset — a model predicting
 "not fraud" every time would already be 99.75% "accurate" while catching zero
@@ -160,7 +160,7 @@ cbdc-fraud-detection/
 
 ## Quickstart
 
-```bash
+```bash (running command for backend)
 git clone https://github.com/<your-username>/cbdc-fraud-detection.git
 cd cbdc-fraud-detection/backend
 pip install -r requirements.txt
