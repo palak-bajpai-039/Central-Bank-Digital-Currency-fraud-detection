@@ -160,7 +160,7 @@ cbdc-fraud-detection/
 
 ## Quickstart
 
-```bash (running command for backend)
+```bash
 git clone https://github.com/<your-username>/cbdc-fraud-detection.git
 cd cbdc-fraud-detection/backend
 pip install -r requirements.txt
