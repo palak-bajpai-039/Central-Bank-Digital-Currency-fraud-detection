@@ -217,18 +217,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 [MIT](LICENSE)
-
-User
-↓
-Frontend / Wallet UI
-↓
-POST /transaction
-↓
-FastAPI Backend
-↓
-ML Engine
-(Random Forest + Isolation Forest)
-↓
-Risk Score
-↓
-Frontend Dashboard
